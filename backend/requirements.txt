@@ -1,0 +1,21 @@
+# Flask web framework
+Flask==3.0.0
+
+# CORS support for Flask
+Flask-Cors==4.0.0
+
+# Swagger UI for interactive API documentation
+flask-swagger-ui==5.21.0
+
+# Werkzeug for Flask utilities
+Werkzeug==3.0.1
+
+# For API documentation
+PyYAML==6.0.1
+
+# HTTP requests library (for demo script)
+requests==2.31.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0

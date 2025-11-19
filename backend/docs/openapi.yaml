@@ -1,0 +1,349 @@
+openapi: 3.0.3
+info:
+  title: Social Media REST API
+  description: |
+    A REST API for a simple social media application that allows users to create posts,
+    retrieve posts, and search through posts. Posts can contain text and optional images.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@socialmedia.com
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+  - url: https://api.socialmedia.com/api
+    description: Production server
+
+tags:
+  - name: posts
+    description: Operations related to social media posts
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Check if the API is running and healthy
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  message:
+                    type: string
+                    example: Social Media API is running
+
+  /posts:
+    post:
+      tags:
+        - posts
+      summary: Create a new post
+      description: Create a new social media post with text and optional image
+      operationId: createPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostCreate'
+            examples:
+              textOnly:
+                summary: Text-only post
+                value:
+                  user: john_doe
+                  text: Just had an amazing coffee at the new cafe!
+              withImage:
+                summary: Post with image
+                value:
+                  user: jane_smith
+                  text: Beautiful sunset today!
+                  image: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Post created successfully
+                  post:
+                    $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingUser:
+                  summary: Missing user field
+                  value:
+                    error: User field is required and cannot be empty
+                missingText:
+                  summary: Missing text field
+                  value:
+                    error: Text field is required and cannot be empty
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - posts
+      summary: Get all posts
+      description: Retrieve a list of all posts, optionally limited by a count
+      operationId: getPosts
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of posts to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 10
+      responses:
+        '200':
+          description: Posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of posts returned
+                    example: 3
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{post_id}:
+    get:
+      tags:
+        - posts
+      summary: Get a specific post
+      description: Retrieve detailed information about a specific post by its ID
+      operationId: getPostById
+      parameters:
+        - name: post_id
+          in: path
+          description: ID of the post to retrieve
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: Post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Post not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/latest:
+    get:
+      tags:
+        - posts
+      summary: Get the latest post
+      description: Retrieve the most recently created post
+      operationId: getLatestPost
+      responses:
+        '200':
+          description: Latest post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: No posts found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: No posts found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/search:
+    get:
+      tags:
+        - posts
+      summary: Search for posts
+      description: Search for posts by text content or username
+      operationId: searchPosts
+      parameters:
+        - name: q
+          in: query
+          description: Search query string
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: coffee
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                    description: The search query used
+                    example: coffee
+                  count:
+                    type: integer
+                    description: Number of posts found
+                    example: 2
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+        '400':
+          description: Missing search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Search query parameter "q" is required
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    PostCreate:
+      type: object
+      required:
+        - user
+        - text
+      properties:
+        user:
+          type: string
+          description: Username of the poster
+          minLength: 1
+          maxLength: 50
+          example: john_doe
+        text:
+          type: string
+          description: Text content of the post
+          minLength: 1
+          maxLength: 500
+          example: Just had an amazing coffee at the new cafe!
+        image:
+          type: string
+          format: byte
+          description: Base64 encoded image data (optional)
+          nullable: true
+          example: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the post
+          example: 1
+        user:
+          type: string
+          description: Username of the poster
+          example: john_doe
+        text:
+          type: string
+          description: Text content of the post
+          example: Just had an amazing coffee at the new cafe!
+        image:
+          type: string
+          format: byte
+          description: Base64 encoded image data (null if no image)
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the post was created
+          example: "2025-11-23 10:30:45"
+
+    PostSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the post
+          example: 1
+        user:
+          type: string
+          description: Username of the poster
+          example: john_doe
+        text:
+          type: string
+          description: Text content of the post
+          example: Just had an amazing coffee at the new cafe!
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the post was created
+          example: "2025-11-23 10:30:45"
+        has_image:
+          type: boolean
+          description: Whether the post contains an image
+          example: false
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong
+          example: Invalid request data
