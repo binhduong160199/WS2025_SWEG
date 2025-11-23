@@ -44,4 +44,3 @@
 - This repository uses a development server (Flask `debug=True`). For production, use a WSGI server such as `gunicorn` or `waitress` and set `debug=False`.
 - If you create a new virtual environment, re-run the `pip install` step.
 
-If you want, I can add a short `Makefile` or PowerShell script to simplify these commands.

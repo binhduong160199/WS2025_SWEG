@@ -158,72 +158,71 @@ class SocialMediaDB:
     def get_all_posts(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Retrieve all posts from the database
-        
+
         Args:
             limit: Optional limit on number of posts to return
-        
+
         Returns:
             list: List of dictionaries containing post data
         """
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        
+
         query = '''
-            SELECT id, user, text, created_at
-            FROM posts
+            SELECT id, user, text, created_at, image FROM posts
             ORDER BY id DESC
         '''
-        
         if limit:
             query += f' LIMIT {limit}'
-        
+
         cursor.execute(query)
-        
+
         posts = []
         for row in cursor.fetchall():
             posts.append({
                 'id': row[0],
                 'user': row[1],
                 'text': row[2],
-                'created_at': row[3]
+                'created_at': row[3],
+                'image': row[4]
             })
-        
+
         conn.close()
         return posts
-    
+
     def search_posts(self, query: str) -> List[Dict[str, Any]]:
         """
         Search for posts by text content or username
-        
+
         Args:
             query: Search query string
-        
+
         Returns:
             list: List of matching posts
         """
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        
+
         search_pattern = f'%{query}%'
         cursor.execute('''
-            SELECT id, user, text, created_at
-            FROM posts
+            SELECT id, user, text, created_at, image FROM posts
             WHERE text LIKE ? OR user LIKE ?
             ORDER BY id DESC
         ''', (search_pattern, search_pattern))
-        
+
         posts = []
         for row in cursor.fetchall():
             posts.append({
                 'id': row[0],
                 'user': row[1],
                 'text': row[2],
-                'created_at': row[3]
+                'created_at': row[3],
+                'image': row[4]
             })
-        
+
         conn.close()
         return posts
-    
+
     def delete_all_posts(self) -> None:
         """Delete all posts from the database (useful for testing)"""
         conn = sqlite3.connect(self.db_name)
