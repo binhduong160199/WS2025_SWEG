@@ -26,28 +26,34 @@ const AppContent = () => {
 
   const [activeTab, setActiveTab] = useState('feed');
 
-  // Debounced version of search
-  // useCallback ensures the debounced function is not recreated on every render
-  const debouncedSearch = debounce(async (value) => {
-    if (!value.trim()) {
-      setFilteredPosts(null);
-      return;
-    }
-    const results = await doSearch(value);
-    setFilteredPosts(results);
-  }, 400);
+  const debouncedSearchRef = React.useRef(null);
 
-  // To cleanup the debounce on unmount:
   useEffect(() => {
+    debouncedSearchRef.current = debounce(async (value) => {
+      if (!value.trim()) {
+        setFilteredPosts(null);
+        return;
+      }
+      try {
+        const results = await doSearch(value);
+        setFilteredPosts(results);
+      } catch (err) {
+        console.error('Search failed:', err);
+        setFilteredPosts([]);
+      }
+    }, 400);
+
     return () => {
-      debouncedSearch.cancel();
+      if (debouncedSearchRef.current && debouncedSearchRef.current.cancel) {
+        debouncedSearchRef.current.cancel();
+      }
     };
-  }, [debouncedSearch]);
+  }, [doSearch]);
 
   // This handler triggers when user types
   const handleSearch = (value) => {
     setSearchQuery(value);
-    debouncedSearch(value);
+    if (debouncedSearchRef.current) debouncedSearchRef.current(value);
   };
 
   const handleCreate = async (newPost) => {
