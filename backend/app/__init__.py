@@ -18,7 +18,10 @@ def create_app(config=None):
     # Load configuration
     if config:
         app.config.update(config)
-    from backend.config import Config
+    try:
+        from backend.config import Config
+    except ImportError:
+        from config import Config
     app.config['DATABASE_URL'] = Config.DATABASE_URL
     app.config['TESTING'] = Config.TESTING
     # Register API blueprints
