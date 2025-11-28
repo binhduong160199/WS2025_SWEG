@@ -8,8 +8,8 @@ api_bp = Blueprint('api', __name__)
 
 
 def get_db():
-    """Get database instance with current app configuration"""
-    return SocialMediaDB(current_app.config.get('DATABASE', 'social_media.db'))
+  """Get database instance with current app configuration"""
+  return SocialMediaDB(current_app.config['DATABASE_URL'])
 
 
 @api_bp.route('/health', methods=['GET'])

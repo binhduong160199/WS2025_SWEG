@@ -9,7 +9,7 @@ class TestSocialMediaDB(unittest.TestCase):
     
     def setUp(self):
         """Set up test database before each test"""
-        self.test_db = "test_social_media.db"
+        # self.test_db = "test_social_media.db"  # Removed SQLite test DB
         self.db = SocialMediaDB(self.test_db)
     
     def tearDown(self):
