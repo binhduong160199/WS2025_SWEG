@@ -1,46 +1,59 @@
 **Backend README**
 
-- **Project:**: Minimal Flask backend for the course project.
+- **Project:**: Flask backend with PostgreSQL, Docker, and CI/CD.
 - **Location:**: `backend/`
 
-**Quick Start**
+**Quick Start (Docker Compose)**
 
-- **Create or activate venv (optional):** Use the workspace venv or create a new one.
-  - Example (PowerShell):
-    ```powershell
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    ```
-- **Install dependencies:**
-  ```powershell
-  .\.venv\Scripts\python.exe -m pip install -r .\backend\requirements.txt
-  ```
-- **Run the server:**
-  ```powershell
-  .\.venv\Scripts\python.exe .\backend\run.py
-  ```
-  The app listens on `0.0.0.0:5000` by default (development server, `debug=True`).
-  - **Swagger UI:** once the server is running, open `http://localhost:5000/api/docs` to view the interactive API documentation (served from `flask-swagger-ui`).
+1. Create a `.env` file with your PostgreSQL credentials (or use defaults):
+   ```env
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=postgres
+   POSTGRES_DB=social_media
+   DATABASE_URL=postgresql://postgres:postgres@db:5432/social_media
+   ```
 
+2. Build and run with Docker Compose (add a `docker-compose.yml` if needed):
+   ```sh
+   docker-compose up --build
+   ```
+
+**Quick Start (Docker only)**
+
+1. Start a PostgreSQL container (example):
+   ```sh
+   docker run --name sweg-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=social_media -p 5432:5432 -d postgres:15
+   ```
+2. Build and run backend:
+   ```sh
+   docker build -t sweg-backend ./backend
+   docker run --env DATABASE_URL=postgresql://postgres:postgres@<host_or_container>:5432/social_media -p 5001:5001 sweg-backend
+   ```
 
 **Tests**
 
-- Run the test suite with `pytest`:
-  ```powershell
-  .\.venv\Scripts\python.exe -m pytest -q
+- Run the test suite with `pytest` (requires PostgreSQL running):
+  ```sh
+  pytest
   ```
 
 **Files of interest**
 
 - `backend/run.py`: application entry point.
-- `backend/requirements.txt`: pinned Python dependencies.
-- `backend/app/`: application package (`create_app`, routes, models, DB helpers).
-- `backend/docs/openapi.yaml` and `backend/API_REFERENCE.md`: API documentation.
+- `backend/requirements.txt`: Python dependencies.
+- `backend/app/`: application package (routes, models, DB helpers).
+- `backend/Dockerfile`: container build instructions.
+- `.github/workflows/docker-build-push.yml`: CI/CD pipeline.
+- `backend/docs/openapi.yaml` and `backend/API_REFERENCE.md`: API docs.
 
-- **Swagger UI endpoint:** `GET /api/docs` serves the interactive Swagger UI (OpenAPI) when the server is running.
+**CI/CD**
 
-**Notes & Recommendations**
+- On push to `main`, GitHub Actions builds and pushes the backend Docker image to DockerHub.
+  - Set `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets in your repo.
 
-- This repository uses a development server (Flask `debug=True`). For production, use a WSGI server such as `gunicorn` or `waitress` and set `debug=False`.
-- If you create a new virtual environment, re-run the `pip install` step.
+**Notes**
+
+- The backend now requires a running PostgreSQL instance.
+- All database code uses SQLAlchemy for maintainability.
+- For local dev, you can still run with venv and `DATABASE_URL` set.
 

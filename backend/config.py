@@ -2,9 +2,11 @@
 import os
 
 
+
 class Config:
     """Base configuration"""
-    DATABASE = os.environ.get('DATABASE', 'social_media.db')
+    # Use DATABASE_URL for SQLAlchemy/PostgreSQL
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres@db:5432/social_media')
     TESTING = False
     DEBUG = False
 
@@ -14,10 +16,11 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
 
+
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    DATABASE = 'test_social_media.db'
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres@db:5432/test_social_media')
 
 
 class ProductionConfig(Config):
