@@ -1,25 +1,34 @@
-# Flask web framework
+# --- Core Web and REST ---
 Flask==3.0.0
-
-# CORS support for Flask
 Flask-Cors==4.0.0
 
-# Swagger UI for interactive API documentation
+# Swagger / OpenAPI UI
 flask-swagger-ui==5.21.0
-
-# Werkzeug for Flask utilities
-Werkzeug==3.0.1
-
-# For API documentation
 PyYAML==6.0.1
 
-# HTTP requests library (for demo script)
+# Werkzeug (WSGI, Flask utilities)
+Werkzeug==3.0.1
+
+# --- Database ---
+SQLAlchemy==2.0.25           # ORM
+psycopg2-binary==2.9.9       # PostgreSQL driver (binary)
+
+# --- Optional: Alembic for migrations (recommended for prod) ---
+alembic==1.13.1
+
+# --- HTTP requests for demo/tests/scripts ---
 requests==2.31.0
 
-# Testing
+# --- Testing ---
 pytest==7.4.3
 pytest-cov==4.1.0
 
-# Database
-SQLAlchemy==2.0.25
-psycopg2-binary==2.9.9
+# --- Environment variables support (optional, for .env loading) ---
+python-dotenv==1.0.1
+
+# --- Production server (recommended for deployment) ---
+gunicorn==21.2.0
+
+# --- Linting/Formatting (dev-only, optional) ---
+flake8==6.1.0
+black==23.11.0
