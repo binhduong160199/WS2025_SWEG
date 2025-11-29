@@ -55,7 +55,7 @@ jobs:
             sleep 2
           done
 
-      # ⭐ 4.5 CREATE TEST DATABASE ⭐
+      # ⭐ 4.5 CREATE TEST DATABASE 
       - name: Create test database for integration tests
         run: |
           psql -h localhost -U postgres -d postgres -c "CREATE DATABASE test_social_media;"
