@@ -11,8 +11,10 @@ class TestRestAPI(unittest.TestCase):
     
     def setUp(self):
         """Set up test client and test database before each test"""
-        # Use correct SQLAlchemy URL for SQLite!
-        self.test_db = "sqlite:///test_api.db"
+        self.test_db = os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres:postgres@localhost:5432/test_social_media"
+        )
         self.app = create_app({
             'TESTING': True,
             'DATABASE': self.test_db
@@ -22,13 +24,11 @@ class TestRestAPI(unittest.TestCase):
         # Initialize database
         with self.app.app_context():
             self.db = SocialMediaDB(self.test_db)
+            self.db.delete_all_posts()  # Clean up between tests (optional, if implemented)
     
     def tearDown(self):
-        """Clean up test database after each test"""
-        # Remove the SQLite file after each test (optional, keeps things clean)
-        sqlite_file = "test_api.db"
-        if os.path.exists(sqlite_file):
-            os.remove(sqlite_file)
+        with self.app.app_context():
+            self.db.delete_all_posts()
     
     def test_health_check(self):
         response = self.client.get('/api/health')

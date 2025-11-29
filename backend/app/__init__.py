@@ -37,9 +37,9 @@ def create_app(config=None):
             from config import Config
         db_url = getattr(Config, "DATABASE_URL", None)
 
-    # d) final fallback: SQLite test DB (valid URL)
+        # d) final fallback: FAIL if nothing is set
     if not db_url:
-        db_url = "sqlite:///test_api.db"
+        raise RuntimeError("DATABASE_URL is not set! Please set DATABASE_URL environment variable.")
 
     app.config['DATABASE_URL'] = db_url
 
