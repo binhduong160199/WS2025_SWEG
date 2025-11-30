@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Send, Image as ImageIcon } from 'lucide-react';
+import { X, Send, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { usePosts } from '../contexts/PostContext';
 
 const initialPostState = {
@@ -12,6 +12,8 @@ const CreatePostModal = ({ onClose }) => {
   const { addPost } = usePosts();
   const [newPost, setNewPost] = useState(initialPostState);
   const [preview, setPreview] = useState(null);
+
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -33,13 +35,18 @@ const CreatePostModal = ({ onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!newPost.user.trim() || !newPost.text.trim()) {
-      alert('Please fill in all required fields');
+      setSuccessMessage("Please fill in all required fields.");
+      setTimeout(() => setSuccessMessage(""), 3000); 
       return;
     }
+
     await addPost(newPost);
+
     setNewPost(initialPostState);
     setPreview(null);
+    setSuccessMessage("Post created successfully!");
   };
 
   return (
@@ -54,6 +61,14 @@ const CreatePostModal = ({ onClose }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {successMessage && (
+          <div className="mx-6 mt-4 mb-2 flex items-center gap-2 bg-green-600/20 border border-green-500/40 text-green-300 px-4 py-3 rounded-xl animate-fadeIn">
+            <CheckCircle className="w-5 h-5" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -70,6 +85,7 @@ const CreatePostModal = ({ onClose }) => {
               required
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               What's on your mind? *
@@ -88,6 +104,7 @@ const CreatePostModal = ({ onClose }) => {
               {newPost.text.length}/500
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Add Image (Optional)
@@ -121,6 +138,7 @@ const CreatePostModal = ({ onClose }) => {
               </label>
             </div>
           </div>
+
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
