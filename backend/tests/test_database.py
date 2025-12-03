@@ -98,7 +98,7 @@ class TestRestAPI(unittest.TestCase):
             content_type="application/json"
         )
         self.assertEqual(resp.status_code, 400)
-
+ 
     def test_create_post_text_too_long(self):
         resp = self.client.post(
             "/api/posts",
