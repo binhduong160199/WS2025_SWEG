@@ -40,11 +40,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # 3. Install dependencies
+      # 3. Install dependencies - MODIFIED to use working-directory
       - name: Install dependencies
+        working-directory: ./backend
         run: |
           python -m pip install --upgrade pip
-          cd backend
           pip install -r requirements.txt
 
       # 4. Wait for Postgres to be ready
@@ -62,23 +62,23 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      # 5. Run pytest tests (set DATABASE_URL to use localhost)
+      # 5. Run pytest tests (set DATABASE_URL to use localhost) - MODIFIED to use working-directory
       - name: Run API tests with pytest
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_social_media
+        working-directory: ./backend
         run: |
-          cd backend
           python -m pytest tests/ -v --tb=short
 
-      # 6. Run tests with coverage
+      # 6. Run tests with coverage - MODIFIED to use working-directory
       - name: Run tests with coverage
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_social_media
+        working-directory: ./backend
         run: |
-          cd backend
           python -m pytest tests/ --cov=app --cov-report=term --cov-report=xml
 
-      # 7. Upload coverage report
+      # 7. Upload coverage report (Path is now correct relative to root)
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         if: matrix.python-version == '3.12'
