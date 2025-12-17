@@ -6,16 +6,8 @@ export const fetchPostsWithImages = async () => {
   const data = await response.json();
   let posts = data.posts || [];
 
-  // Always fetch image if exists
-  await Promise.all(posts.map(async (post, i) => {
-    if (post.has_image) {
-      const detailRes = await fetch(`${API_BASE_URL}/posts/${post.id}`);
-      if (detailRes.ok) {
-        const detailData = await detailRes.json();
-        posts[i].image = detailData.image || null;
-      }
-    }
-  }));
+  // The backend now provides `thumbnail` (base64) in list responses.
+  // Keep `image` empty until a detailed fetch is requested (lazy-load).
   return { posts };
 };
 
@@ -23,13 +15,6 @@ export const fetchLatestPostWithImage = async () => {
   const response = await fetch(`${API_BASE_URL}/posts/latest`);
   if (!response.ok) throw new Error('Failed to fetch latest post');
   const post = await response.json();
-  if (post && post.has_image) {
-    const detailRes = await fetch(`${API_BASE_URL}/posts/${post.id}`);
-    if (detailRes.ok) {
-      const detailData = await detailRes.json();
-      post.image = detailData.image || null;
-    }
-  }
   return post;
 };
 
@@ -39,15 +24,7 @@ export const searchPostsWithImages = async (query) => {
   const data = await response.json();
   let posts = data.posts || [];
 
-  await Promise.all(posts.map(async (post, i) => {
-    if (post.has_image) {
-      const detailRes = await fetch(`${API_BASE_URL}/posts/${post.id}`);
-      if (detailRes.ok) {
-        const detailData = await detailRes.json();
-        posts[i].image = detailData.image || null;
-      }
-    }
-  }));
+  // thumbnails are included in list responses; do not fetch full images here.
   return { posts };
 };
 

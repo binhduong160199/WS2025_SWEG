@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, Share2, User, Eye, TrendingUp } from 'lucide-react';
+import LazyImage from './LazyImage';
 
 const PostCard = ({ post, onLike, isLatest = false }) => {
 
@@ -58,17 +59,10 @@ const PostCard = ({ post, onLike, isLatest = false }) => {
 
                 <p className="text-gray-200 mb-4 leading-relaxed">{post.text}</p>
 
-                {/* Show image if present */}
-                {post.image && (
+                {/* Show thumbnail if present; lazy-load full image on click */}
+                {(post.thumbnail || post.image) && (
                     <div className="mb-4 rounded-xl overflow-hidden bg-black/20 group">
-                        <img
-                            src={`data:image/jpeg;base64,${post.image}`}
-                            alt="Post content"
-                            className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                            }}
-                        />
+                        <LazyImage post={post} />
                     </div>
                 )}
 
