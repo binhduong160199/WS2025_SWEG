@@ -17,10 +17,12 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/social_media
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "5001:5001"
     depends_on:
       - db
+      - rabbitmq
 
   frontend:
     build: ./frontend               
@@ -30,6 +32,24 @@ services:
       - backend
     environment:
       - REACT_APP_API_URL=http://backend:5001/api  
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  image_processor:
+    build: ./image_processor
+    environment:
+      - BACKEND_URL=http://backend:5001/api
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+      - backend
 
 volumes:
   pgdata:
