@@ -2,6 +2,9 @@
 from flask import Blueprint, request, jsonify, current_app
 from app.database import SocialMediaDB
 from app.models import PostCreate, PostResponse, PostListResponse
+import os
+import json
+import pika
 
 
 api_bp = Blueprint('api', __name__)
@@ -78,10 +81,30 @@ def create_post():
         # Save to database
         db = get_db()
         post_id = db.add_post_with_image_data(
-            user=post.user,
-            text=post.text,
-            image_data=post.get_image_bytes()
+          user=post.user,
+          text=post.text,
+          image_data=post.get_image_bytes()
         )
+
+        # Publish message to queue for image processing (if image present)
+        try:
+          if post.get_image_bytes():
+            rabbit_url = current_app.config.get('RABBITMQ_URL', os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/'))
+            params = pika.URLParameters(rabbit_url)
+            connection = pika.BlockingConnection(params)
+            channel = connection.channel()
+            channel.queue_declare(queue='image_resize', durable=True)
+            message = json.dumps({'post_id': post_id})
+            channel.basic_publish(
+              exchange='',
+              routing_key='image_resize',
+              body=message,
+              properties=pika.BasicProperties(delivery_mode=2)
+            )
+            connection.close()
+        except Exception:
+          # Non-fatal: if queue publish fails, creation still succeeds
+          pass
         
         # Retrieve and return the created post
         created_post = db.get_post_by_id(post_id)
@@ -148,7 +171,6 @@ def get_posts():
         
         db = get_db()
         posts_data = db.get_all_posts(limit=limit)
-        
         posts = [PostListResponse.from_db(post).to_dict() for post in posts_data]
         
         return jsonify({
@@ -241,3 +263,33 @@ def method_not_allowed(error):
 def internal_error(error):
     """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
+
+
+# Endpoint for updating thumbnail (used by processor)
+@api_bp.route('/posts/<int:post_id>/thumbnail', methods=['PATCH'])
+def update_thumbnail(post_id):
+  """Accept base64 thumbnail and store it for the given post"""
+  try:
+    data = request.get_json()
+    if not data or 'thumbnail' not in data:
+      return jsonify({'error': 'thumbnail field is required'}), 400
+
+    thumbnail_b64 = data.get('thumbnail')
+    if thumbnail_b64 is None:
+      return jsonify({'error': 'thumbnail cannot be null'}), 400
+
+    try:
+      import base64 as _b64
+      thumb_bytes = _b64.b64decode(thumbnail_b64)
+    except Exception:
+      return jsonify({'error': 'Invalid base64 thumbnail data'}), 400
+
+    db = get_db()
+    ok = db.update_thumbnail(post_id, thumb_bytes)
+    if not ok:
+      return jsonify({'error': 'Post not found'}), 404
+
+    return jsonify({'message': 'Thumbnail updated'}), 200
+
+  except Exception as e:
+    return jsonify({'error': f'Internal server error: {str(e)}'}), 500

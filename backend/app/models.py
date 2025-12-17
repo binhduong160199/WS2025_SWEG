@@ -53,6 +53,7 @@ class PostResponse:
     user: str
     text: str
     image: Optional[str]  # Base64 encoded or None
+    thumbnail: Optional[str]
     created_at: str
     
     @classmethod
@@ -69,12 +70,16 @@ class PostResponse:
         image_b64 = None
         if post_data.get('image'):
             image_b64 = base64.b64encode(post_data['image']).decode('utf-8')
+        thumbnail_b64 = None
+        if post_data.get('thumbnail'):
+            thumbnail_b64 = base64.b64encode(post_data['thumbnail']).decode('utf-8')
         
         return cls(
             id=post_data['id'],
             user=post_data['user'],
             text=post_data['text'],
             image=image_b64,
+            thumbnail=thumbnail_b64,
             created_at=post_data['created_at']
         )
     
@@ -85,6 +90,7 @@ class PostResponse:
             'user': self.user,
             'text': self.text,
             'image': self.image,
+            'thumbnail': self.thumbnail,
             'created_at': self.created_at
         }
 
@@ -97,6 +103,7 @@ class PostListResponse:
     text: str
     created_at: str
     has_image: bool = False
+    thumbnail: Optional[str] = None
     
     @classmethod
     def from_db(cls, post_data: dict) -> 'PostListResponse':
@@ -114,7 +121,8 @@ class PostListResponse:
             user=post_data['user'],
             text=post_data['text'],
             created_at=post_data['created_at'],
-            has_image='image' in post_data and post_data['image'] is not None
+            has_image='image' in post_data and post_data['image'] is not None,
+            thumbnail=(base64.b64encode(post_data['thumbnail']).decode('utf-8') if post_data.get('thumbnail') else None)
         )
     
     def to_dict(self) -> dict:
@@ -124,5 +132,6 @@ class PostListResponse:
             'user': self.user,
             'text': self.text,
             'created_at': self.created_at,
-            'has_image': self.has_image
+            'has_image': self.has_image,
+            'thumbnail': self.thumbnail
         }
