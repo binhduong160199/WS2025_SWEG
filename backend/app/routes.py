@@ -1,15 +1,17 @@
 """REST API routes for social media application"""
+
 from flask import Blueprint, request, jsonify, current_app
 from app.database import SocialMediaDB
 from app.models import PostCreate, PostResponse, PostListResponse
+from app.messaging import publish_image_resize_event   # ✅ NEW IMPORT
 
 
 api_bp = Blueprint('api', __name__)
 
 
 def get_db():
-  """Get database instance with current app configuration"""
-  return SocialMediaDB(current_app.config['DATABASE_URL'])
+    """Get database instance with current app configuration"""
+    return SocialMediaDB(current_app.config['DATABASE_URL'])
 
 
 @api_bp.route('/health', methods=['GET'])
@@ -59,39 +61,46 @@ def create_post():
     """
     try:
         data = request.get_json()
-        
+
         # Handle empty or invalid JSON
         if data is None:
             return jsonify({'error': 'Request body is required'}), 400
-        
+
         # Create and validate post
         post = PostCreate(
             user=data.get('user', ''),
             text=data.get('text', ''),
             image=data.get('image')
         )
-        
+
         is_valid, error_msg = post.validate()
         if not is_valid:
             return jsonify({'error': error_msg}), 400
-        
+
         # Save to database
         db = get_db()
+
+        image_bytes = post.get_image_bytes()
+
         post_id = db.add_post_with_image_data(
             user=post.user,
             text=post.text,
-            image_data=post.get_image_bytes()
+            image_data=image_bytes
         )
-        
+
+        # 🔔 EVENT-DRIVEN PART (STEP 2.4)
+        if image_bytes is not None:
+            publish_image_resize_event(post_id)
+
         # Retrieve and return the created post
         created_post = db.get_post_by_id(post_id)
         response = PostResponse.from_db(created_post)
-        
+
         return jsonify({
             'message': 'Post created successfully',
             'post': response.to_dict()
         }), 201
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
@@ -117,13 +126,13 @@ def get_post(post_id):
     try:
         db = get_db()
         post_data = db.get_post_by_id(post_id)
-        
+
         if not post_data:
             return jsonify({'error': 'Post not found'}), 404
-        
+
         response = PostResponse.from_db(post_data)
         return jsonify(response.to_dict()), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
@@ -145,17 +154,17 @@ def get_posts():
     """
     try:
         limit = request.args.get('limit', type=int)
-        
+
         db = get_db()
         posts_data = db.get_all_posts(limit=limit)
-        
+
         posts = [PostListResponse.from_db(post).to_dict() for post in posts_data]
-        
+
         return jsonify({
             'count': len(posts),
             'posts': posts
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
@@ -180,21 +189,21 @@ def search_posts():
     """
     try:
         query = request.args.get('q', '').strip()
-        
+
         if not query:
             return jsonify({'error': 'Search query parameter "q" is required'}), 400
-        
+
         db = get_db()
         posts_data = db.search_posts(query)
-        
+
         posts = [PostListResponse.from_db(post).to_dict() for post in posts_data]
-        
+
         return jsonify({
             'query': query,
             'count': len(posts),
             'posts': posts
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
@@ -213,31 +222,30 @@ def get_latest_post():
     try:
         db = get_db()
         post_data = db.get_latest_post()
-        
+
         if not post_data:
             return jsonify({'error': 'No posts found'}), 404
-        
+
         response = PostResponse.from_db(post_data)
         return jsonify(response.to_dict()), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
+# ------------------------------------------------------
 # Error handlers
+# ------------------------------------------------------
 @api_bp.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors"""
     return jsonify({'error': 'Endpoint not found'}), 404
 
 
 @api_bp.errorhandler(405)
 def method_not_allowed(error):
-    """Handle 405 errors"""
     return jsonify({'error': 'Method not allowed'}), 405
 
 
 @api_bp.errorhandler(500)
 def internal_error(error):
-    """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500

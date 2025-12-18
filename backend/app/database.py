@@ -12,8 +12,15 @@ class Post(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user = Column(String, nullable=False)
     text = Column(Text, nullable=False)
+
+    # full-size image (existing)
     image = Column(LargeBinary)
+
+    # NEW: reduced-size / thumbnail image
+    image_thumb = Column(LargeBinary)
+
     created_at = Column(TIMESTAMP, server_default=func.now())
+
 
 class SocialMediaDB:
     def __init__(self, db_url: str):
@@ -27,7 +34,8 @@ class SocialMediaDB:
         if image_path:
             with open(image_path, 'rb') as f:
                 image_data = f.read()
-        post = Post(user=user, text=text, image=image_data)
+
+        post = Post(user=user, text=text, image=image_data, image_thumb=None)
         session.add(post)
         session.commit()
         post_id = post.id
@@ -36,7 +44,7 @@ class SocialMediaDB:
 
     def add_post_with_image_data(self, user: str, text: str, image_data: Optional[bytes] = None) -> int:
         session = self.Session()
-        post = Post(user=user, text=text, image=image_data)
+        post = Post(user=user, text=text, image=image_data, image_thumb=None)
         session.add(post)
         session.commit()
         post_id = post.id
@@ -53,6 +61,7 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
+                'image_thumb': post.image_thumb,  # NEW
                 'created_at': post.created_at
             }
         return None
@@ -67,6 +76,7 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
+                'image_thumb': post.image_thumb,  # NEW
                 'created_at': post.created_at
             }
         return None
@@ -76,13 +86,15 @@ class SocialMediaDB:
         query = session.query(Post).order_by(Post.id.desc())
         if limit:
             query = query.limit(limit)
+
         posts = [
             {
                 'id': post.id,
                 'user': post.user,
                 'text': post.text,
                 'created_at': post.created_at,
-                'image': post.image
+                'image': post.image,
+                'image_thumb': post.image_thumb  # NEW
             }
             for post in query.all()
         ]
@@ -94,13 +106,15 @@ class SocialMediaDB:
         posts = session.query(Post).filter(
             (Post.text.ilike(f'%{query}%')) | (Post.user.ilike(f'%{query}%'))
         ).order_by(Post.id.desc()).all()
+
         result = [
             {
                 'id': post.id,
                 'user': post.user,
                 'text': post.text,
                 'created_at': post.created_at,
-                'image': post.image
+                'image': post.image,
+                'image_thumb': post.image_thumb  # NEW
             }
             for post in posts
         ]
@@ -113,4 +127,24 @@ class SocialMediaDB:
         session.commit()
         session.close()
 
+    def get_full_image_by_post_id(self, post_id: int) -> Optional[bytes]:
+        session = self.Session()
+        post = session.query(Post).filter_by(id=post_id).first()
+        session.close()
 
+        if post:
+            return post.image
+        return None        
+
+    def update_post_thumbnail(self, post_id: int, thumbnail_data: bytes) -> bool:
+        session = self.Session()
+        post = session.query(Post).filter_by(id=post_id).first()
+
+        if not post:
+            session.close()
+            return False
+
+        post.image_thumb = thumbnail_data
+        session.commit()
+        session.close()
+        return True    
