@@ -102,7 +102,9 @@ class PostListResponse:
         thumb_b64 = None
 
         if post_data.get('image_thumb'):
-            thumb_b64 = base64.b64encode(post_data['image_thumb']).decode('utf-8')
+            thumb_b64 = base64.b64encode(
+                post_data['image_thumb']
+            ).decode('utf-8')
 
         return cls(
             id=post_data['id'],
@@ -122,5 +124,5 @@ class PostListResponse:
             'created_at': self.created_at,
             'has_image': self.has_image,
             'has_thumbnail': self.has_thumbnail,
-            'thumbnail': self.thumbnail
+            'image_thumb': self.thumbnail
         }
