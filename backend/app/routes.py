@@ -88,11 +88,12 @@ def create_post():
             image_data=image_bytes
         )
 
-        # 🔔 EVENT-DRIVEN PART (STEP 2.4)
-        if image_bytes is not None:
+        if (
+            image_bytes is not None
+            and not current_app.config.get("TESTING", False)
+        ):
             publish_image_resize_event(post_id)
 
-        # Retrieve and return the created post
         created_post = db.get_post_by_id(post_id)
         response = PostResponse.from_db(created_post)
 

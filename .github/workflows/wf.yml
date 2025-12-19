@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: social_media
+          POSTGRES_DB: test_social_media   # ✅ FIX
         ports:
           - 5432:5432
         options: >-
@@ -26,28 +26,25 @@ jobs:
           --health-retries 5
 
     strategy:
+      fail-fast: false                     # ✅ FIX (matrix safety)
       matrix:
         python-version: ['3.11', '3.12']
 
     steps:
-      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Python
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      # 3. Install dependencies - MODIFIED to use working-directory
       - name: Install dependencies
         working-directory: ./backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Wait for Postgres to be ready
       - name: Wait for Postgres
         run: |
           for i in {1..10}; do
@@ -55,33 +52,25 @@ jobs:
             sleep 2
           done
 
-      # 4.5 CREATE TEST DATABASE 
-      - name: Create test database for integration tests
-        run: |
-          psql -h localhost -U postgres -d postgres -c "CREATE DATABASE test_social_media;"
-        env:
-          PGPASSWORD: postgres
+      # ❌ REMOVE CREATE DATABASE STEP (no longer needed)
 
-      # 5. Run pytest tests (set DATABASE_URL to use localhost) - MODIFIED to use working-directory
       - name: Run API tests with pytest
+        working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_social_media
-        working-directory: ./backend
         run: |
           python -m pytest tests/ -v --tb=short
 
-      # 6. Run tests with coverage - MODIFIED to use working-directory
       - name: Run tests with coverage
+        working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_social_media
-        working-directory: ./backend
         run: |
           python -m pytest tests/ --cov=app --cov-report=term --cov-report=xml
 
-      # 7. Upload coverage report (Path is now correct relative to root)
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
         if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
         with:
           file: ./backend/coverage.xml
           flags: unittests

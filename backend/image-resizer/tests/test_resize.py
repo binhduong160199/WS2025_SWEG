@@ -1,7 +1,21 @@
+import importlib.util
+import os
 from io import BytesIO
 from PIL import Image
 
-from app.resize import make_thumbnail
+# --------------------------------------------------
+# Load resize.py by file path (NO package import)
+# --------------------------------------------------
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "app")
+)
+RESIZE_PATH = os.path.join(BASE_DIR, "resize.py")
+
+spec = importlib.util.spec_from_file_location("resize", RESIZE_PATH)
+resize = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(resize)
+
+make_thumbnail = resize.make_thumbnail
 
 
 def _make_test_png(width=1200, height=800) -> bytes:
