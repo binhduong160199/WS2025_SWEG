@@ -9,6 +9,8 @@ import {
   X
 } from 'lucide-react';
 import { fetchPostDetail } from '../services/api';
+import SentimentBadge from './SentimentBadge';
+import TextSuggestions from './TextSuggestions';
 
 const PostCard = ({ post, onLike, isLatest = false }) => {
 
@@ -124,6 +126,19 @@ const PostCard = ({ post, onLike, isLatest = false }) => {
               Image is processing...
             </div>
           )}
+
+          {/* ML Features Section */}
+          <div className="mb-4 flex flex-col space-y-3">
+            <SentimentBadge 
+              sentiment={post.sentiment_label}
+              score={post.sentiment_score}
+              processingStatus={post.processing_status}
+            />
+            <TextSuggestions 
+              generatedText={post.generated_text}
+              processingStatus={post.processing_status}
+            />
+          </div>
 
           <div className="flex items-center space-x-6 py-3 border-t border-b border-purple-500/20 mb-4">
             <span className="text-sm text-gray-400">{likeCount} likes</span>

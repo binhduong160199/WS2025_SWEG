@@ -44,10 +44,34 @@ services:
       - rabbitmq
 
   # --------------------------------------------------
-  # Image Resizer Microservice (NEW)
+  # Image Resizer Microservice
   # --------------------------------------------------
   image-resizer:
     build: ./backend/image-resizer
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/social_media
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db
+      - rabbitmq
+
+  # --------------------------------------------------
+  # Sentiment Analysis Microservice (NEW)
+  # --------------------------------------------------
+  sentiment-analyzer:
+    build: ./backend/sentiment-analyzer
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/social_media
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db
+      - rabbitmq
+
+  # --------------------------------------------------
+  # Text Generation Microservice (NEW)
+  # --------------------------------------------------
+  text-generator:
+    build: ./backend/text-generator
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/social_media
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/

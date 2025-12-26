@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from app.database import SocialMediaDB
 from app.models import PostCreate, PostResponse, PostListResponse
-from app.messaging import publish_image_resize_event   # ✅ NEW IMPORT
+from app.messaging import publish_image_resize_event, publish_sentiment_analysis_event, publish_text_generation_event
 
 
 api_bp = Blueprint('api', __name__)
@@ -93,6 +93,11 @@ def create_post():
             and not current_app.config.get("TESTING", False)
         ):
             publish_image_resize_event(post_id)
+        
+        # Publish ML analysis events
+        if not current_app.config.get("TESTING", False):
+            publish_sentiment_analysis_event(post_id, post.text)
+            publish_text_generation_event(post_id, post.text)
 
         created_post = db.get_post_by_id(post_id)
         response = PostResponse.from_db(created_post)
@@ -234,9 +239,161 @@ def get_latest_post():
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
-# ------------------------------------------------------
+# ======================================================
+# ML Features Endpoints
+# ======================================================
+
+@api_bp.route('/posts/<int:post_id>/sentiment', methods=['GET'])
+def get_sentiment(post_id):
+    """
+    Get sentiment analysis for a specific post
+    ---
+    parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the post
+    responses:
+      200:
+        description: Sentiment analysis results
+      404:
+        description: Post not found
+    """
+    try:
+        db = get_db()
+        post = db.get_post_by_id(post_id)
+        
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        return jsonify({
+            'post_id': post_id,
+            'sentiment_label': post.get('sentiment_label'),
+            'sentiment_score': post.get('sentiment_score'),
+            'processing_status': post.get('processing_status')
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@api_bp.route('/posts/<int:post_id>/generated-text', methods=['GET'])
+def get_generated_text(post_id):
+    """
+    Get generated text suggestions for a specific post
+    ---
+    parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the post
+    responses:
+      200:
+        description: Generated text suggestions
+      404:
+        description: Post not found
+    """
+    try:
+        db = get_db()
+        post = db.get_post_by_id(post_id)
+        
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        return jsonify({
+            'post_id': post_id,
+            'generated_text': post.get('generated_text'),
+            'processing_status': post.get('processing_status')
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@api_bp.route('/posts/<int:post_id>/ml-analysis', methods=['GET'])
+def get_ml_analysis(post_id):
+    """
+    Get all ML analysis results for a post
+    ---
+    parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the post
+    responses:
+      200:
+        description: Complete ML analysis results
+      404:
+        description: Post not found
+    """
+    try:
+        db = get_db()
+        post = db.get_post_by_id(post_id)
+        
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        return jsonify({
+            'post_id': post_id,
+            'sentiment': {
+                'label': post.get('sentiment_label'),
+                'score': post.get('sentiment_score')
+            },
+            'generated_text': post.get('generated_text'),
+            'processing_status': post.get('processing_status')
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@api_bp.route('/posts/<int:post_id>/re-analyze', methods=['POST'])
+def re_analyze_post(post_id):
+    """
+    Trigger ML analysis again for a post
+    ---
+    parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the post
+    responses:
+      200:
+        description: Analysis triggered
+      404:
+        description: Post not found
+    """
+    try:
+        db = get_db()
+        post = db.get_post_by_id(post_id)
+        
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        if not current_app.config.get("TESTING", False):
+            publish_sentiment_analysis_event(post_id, post['text'])
+            publish_text_generation_event(post_id, post['text'])
+        
+        return jsonify({
+            'message': 'Analysis re-triggered for post',
+            'post_id': post_id
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+# ======================================================
 # Error handlers
-# ------------------------------------------------------
+# ======================================================
 @api_bp.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404

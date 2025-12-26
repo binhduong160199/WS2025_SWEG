@@ -1,5 +1,5 @@
 # Use official Python image - Updated to 3.12
-FROM python:3.12-slim
+FROM pytorch/pytorch:latest
 
 # Set workdir
 WORKDIR /app
