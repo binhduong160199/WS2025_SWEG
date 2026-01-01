@@ -1,1 +1,1 @@
-"""Initialize tests package"""
+# Test package

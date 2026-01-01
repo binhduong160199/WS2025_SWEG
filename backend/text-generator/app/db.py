@@ -1,72 +1,44 @@
-"""Database connection for text generator"""
-
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, TIMESTAMP
-from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.sql import func
-from typing import Optional, Dict, Any
-import logging
 import os
+from typing import Optional
+from sqlalchemy import create_engine, text
 
-logger = logging.getLogger(__name__)
-Base = declarative_base()
 
-class Post(Base):
-    """Post model (mirror of backend Post model)"""
-    __tablename__ = 'posts'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user = Column(String, nullable=False)
-    text = Column(Text, nullable=False)
-    image = Column(None)  # Not used here
-    image_thumb = Column(None)  # Not used here
-    sentiment_score = Column(Float, nullable=True)
-    sentiment_label = Column(String, nullable=True)
-    generated_text = Column(Text, nullable=True)
-    processing_status = Column(String, default='pending')
-    created_at = Column(TIMESTAMP, server_default=func.now())
+def _get_engine():
+    db_url = os.environ["DATABASE_URL"]
+    return create_engine(db_url)
 
-class DatabaseConnection:
-    def __init__(self, database_url: Optional[str] = None):
-        """Initialize database connection"""
-        db_url = database_url or os.getenv('DATABASE_URL')
-        if not db_url:
-            raise ValueError("DATABASE_URL environment variable not set")
+
+def get_post_text(post_id: int) -> Optional[str]:
+    """Get post text by ID"""
+    engine = _get_engine()
+    with engine.begin() as conn:
+        row = conn.execute(
+            text("SELECT text FROM posts WHERE id = :id"),
+            {"id": post_id}
+        ).fetchone()
+
+    if not row or row[0] is None:
+        return None
+    return row[0]
+
+
+def save_generated_text(post_id: int, generated_text: str) -> None:
+    """Save generated text suggestion for a post"""
+    engine = _get_engine()
+    
+    # First ensure the table exists
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS text_suggestions (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER REFERENCES posts(id),
+                generated_text TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
         
-        self.engine = create_engine(db_url)
-        self.Session = sessionmaker(bind=self.engine)
-        Base.metadata.create_all(self.engine)
-        logger.info("Database connection initialized")
-    
-    def get_post_by_id(self, post_id: int) -> Optional[Dict[str, Any]]:
-        """Get post by ID"""
-        session = self.Session()
-        try:
-            post = session.query(Post).filter_by(id=post_id).first()
-            if post:
-                return {
-                    'id': post.id,
-                    'user': post.user,
-                    'text': post.text,
-                    'processing_status': post.processing_status
-                }
-            return None
-        finally:
-            session.close()
-    
-    def update_generated_text(self, post_id: int, generated_text: str) -> bool:
-        """Update post with generated text suggestions"""
-        session = self.Session()
-        try:
-            post = session.query(Post).filter_by(id=post_id).first()
-            if not post:
-                return False
-            
-            post.generated_text = generated_text
-            session.commit()
-            logger.info(f"Updated generated text for post {post_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Error updating generated text for post {post_id}: {e}")
-            session.rollback()
-            return False
-        finally:
-            session.close()
+        # Insert the suggestion
+        conn.execute(
+            text("INSERT INTO text_suggestions (post_id, generated_text) VALUES (:post_id, :text)"),
+            {"post_id": post_id, "text": generated_text}
+        )

@@ -44,7 +44,7 @@ services:
       - rabbitmq
 
   # --------------------------------------------------
-  # Image Resizer Microservice
+  # Image Resizer Microservice (NEW)
   # --------------------------------------------------
   image-resizer:
     build: ./backend/image-resizer
@@ -56,7 +56,7 @@ services:
       - rabbitmq
 
   # --------------------------------------------------
-  # Sentiment Analysis Microservice (NEW)
+  # Sentiment Analyzer Microservice
   # --------------------------------------------------
   sentiment-analyzer:
     build: ./backend/sentiment-analyzer
@@ -68,7 +68,7 @@ services:
       - rabbitmq
 
   # --------------------------------------------------
-  # Text Generation Microservice (NEW)
+  # Text Generator Microservice
   # --------------------------------------------------
   text-generator:
     build: ./backend/text-generator

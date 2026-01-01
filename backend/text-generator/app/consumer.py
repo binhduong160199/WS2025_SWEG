@@ -1,103 +1,81 @@
-"""RabbitMQ Consumer for Text Generation"""
-
-import pika
 import json
-import logging
 import os
 import time
-from app.text_model import TextGenerator
-from app.db import DatabaseConnection
+import pika
+import logging
+
+from app.db import get_post_text, save_generated_text
+from app.generator import generate_text
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
 
-class TextGenerationConsumer:
-    def __init__(self):
-        """Initialize text generation consumer"""
-        self.rabbitmq_url = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
-        self.generator = TextGenerator()
-        self.db = DatabaseConnection()
-        
-        logger.info("TextGenerationConsumer initialized")
-    
-    def connect(self) -> pika.BlockingConnection:
-        """Connect to RabbitMQ with retries"""
-        retries = 0
-        max_retries = 30
-        
-        while retries < max_retries:
-            try:
-                connection = pika.BlockingConnection(
-                    pika.URLParameters(self.rabbitmq_url)
-                )
-                logger.info("Connected to RabbitMQ")
-                return connection
-            except Exception as e:
-                retries += 1
-                logger.warning(f"RabbitMQ connection attempt {retries}/{max_retries} failed: {e}")
-                time.sleep(2)
-        
-        raise Exception("Failed to connect to RabbitMQ after retries")
-    
-    def callback(self, ch, method, properties, body):
-        """Process text generation message"""
+QUEUE_NAME = "text_generation"
+
+
+def _connect_with_retry():
+    """Connect to RabbitMQ with retry logic"""
+    rabbitmq_url = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
+    params = pika.URLParameters(rabbitmq_url)
+
+    while True:
         try:
-            message = json.loads(body)
-            post_id = message.get('post_id')
-            text = message.get('text')
-            
-            logger.info(f"Processing text generation for post {post_id}")
-            
-            # Generate variations
-            variations = self.generator.generate_variations(text)
-            
-            if variations:
-                # Store as JSON string
-                generated_text = json.dumps({'suggestions': variations})
-                
-                # Update database
-                self.db.update_generated_text(post_id, generated_text)
-                
-                logger.info(f"Text generation completed for post {post_id}: {len(variations)} suggestions")
-            else:
-                logger.warning(f"No text generated for post {post_id}")
-            
-            # Acknowledge message
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            
+            return pika.BlockingConnection(params)
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            # Negative acknowledge to requeue
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-    
-    def start(self):
-        """Start consuming messages"""
-        connection = self.connect()
-        channel = connection.channel()
-        
-        # Declare queue
-        queue_name = 'text_generation'
-        channel.queue_declare(queue=queue_name, durable=True)
-        
-        # Set up consumer
-        channel.basic_qos(prefetch_count=1)  # One message at a time
-        channel.basic_consume(
-            queue=queue_name,
-            on_message_callback=self.callback
-        )
-        
-        logger.info(f"Starting to listen on queue '{queue_name}'")
-        try:
-            channel.start_consuming()
-        except KeyboardInterrupt:
-            logger.info("Shutting down...")
-            channel.stop_consuming()
-            connection.close()
+            logging.info(f"[text-gen] RabbitMQ not ready yet: {e}. Retrying in 2s...")
+            time.sleep(2)
 
-if __name__ == '__main__':
-    consumer = TextGenerationConsumer()
-    consumer.start()
+
+def handle_message(ch, method, properties, body):
+    """Handle incoming text generation request"""
+    try:
+        data = json.loads(body.decode("utf-8"))
+        post_id = int(data["post_id"])
+    except Exception as e:
+        logging.error(f"[text-gen] Invalid message: {body!r} error={e}")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
+    try:
+        # Get post text from database
+        text = get_post_text(post_id)
+        if text is None:
+            logging.warning(f"[text-gen] No text found for post_id={post_id}")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+
+        # Generate text continuation
+        logging.info(f"[text-gen] Generating for post_id={post_id}")
+        generated = generate_text(text, max_length=100)
+        
+        # Save to database
+        save_generated_text(post_id, generated)
+
+        logging.info(f"[text-gen] Generated for post_id={post_id} (length={len(generated)})")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    except Exception as e:
+        logging.error(f"[text-gen] Failed processing post_id={post_id}: {e}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+
+def main():
+    """Main consumer loop"""
+    logging.info("[text-gen] Starting text generation service...")
+    
+    conn = _connect_with_retry()
+    ch = conn.channel()
+
+    ch.queue_declare(queue=QUEUE_NAME, durable=True)
+    ch.basic_qos(prefetch_count=1)
+    ch.basic_consume(queue=QUEUE_NAME, on_message_callback=handle_message)
+
+    logging.info("[text-gen] Listening for text generation jobs...")
+    ch.start_consuming()
+
+
+if __name__ == "__main__":
+    main()

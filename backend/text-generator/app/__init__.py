@@ -1,1 +1,1 @@
-"""Initialize text generator package"""
+# Text generator package

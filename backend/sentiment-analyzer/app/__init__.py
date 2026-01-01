@@ -1,1 +1,1 @@
-"""Initialize sentiment analyzer package"""
+# Sentiment analyzer package

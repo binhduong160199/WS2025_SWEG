@@ -1,6 +1,6 @@
 """Database manager for social media posts"""
 
-from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, TIMESTAMP, Text, Float
+from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, TIMESTAMP, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
 from typing import Optional, Dict, List, Any
@@ -19,11 +19,9 @@ class Post(Base):
     # NEW: reduced-size / thumbnail image
     image_thumb = Column(LargeBinary)
 
-    # ML Features
-    sentiment_score = Column(Float, nullable=True)  # 0.0-1.0 for positive sentiment
-    sentiment_label = Column(String, nullable=True)  # 'POSITIVE', 'NEGATIVE'
-    generated_text = Column(Text, nullable=True)  # Generated text suggestions
-    processing_status = Column(String, default='pending')  # pending, processing, completed, failed
+    # Sentiment analysis fields
+    sentiment_label = Column(String(20))
+    sentiment_score = Column(String(50))
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 
@@ -67,11 +65,9 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
-                'image_thumb': post.image_thumb,
-                'sentiment_score': post.sentiment_score,
+                'image_thumb': post.image_thumb,  # NEW
                 'sentiment_label': post.sentiment_label,
-                'generated_text': post.generated_text,
-                'processing_status': post.processing_status,
+                'sentiment_score': post.sentiment_score,
                 'created_at': post.created_at
             }
         return None
@@ -86,11 +82,9 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
-                'image_thumb': post.image_thumb,
-                'sentiment_score': post.sentiment_score,
+                'image_thumb': post.image_thumb,  # NEW
                 'sentiment_label': post.sentiment_label,
-                'generated_text': post.generated_text,
-                'processing_status': post.processing_status,
+                'sentiment_score': post.sentiment_score,
                 'created_at': post.created_at
             }
         return None
@@ -108,11 +102,9 @@ class SocialMediaDB:
                 'text': post.text,
                 'created_at': post.created_at,
                 'image': post.image,
-                'image_thumb': post.image_thumb,
-                'sentiment_score': post.sentiment_score,
+                'image_thumb': post.image_thumb,  # NEW
                 'sentiment_label': post.sentiment_label,
-                'generated_text': post.generated_text,
-                'processing_status': post.processing_status
+                'sentiment_score': post.sentiment_score
             }
             for post in query.all()
         ]
@@ -132,11 +124,9 @@ class SocialMediaDB:
                 'text': post.text,
                 'created_at': post.created_at,
                 'image': post.image,
-                'image_thumb': post.image_thumb,
-                'sentiment_score': post.sentiment_score,
+                'image_thumb': post.image_thumb,  # NEW
                 'sentiment_label': post.sentiment_label,
-                'generated_text': post.generated_text,
-                'processing_status': post.processing_status
+                'sentiment_score': post.sentiment_score
             }
             for post in posts
         ]
@@ -170,9 +160,8 @@ class SocialMediaDB:
         session.commit()
         session.close()
         return True
-    
-    def update_post_sentiment(self, post_id: int, sentiment_score: float, sentiment_label: str) -> bool:
-        """Update post with sentiment analysis results"""
+
+    def update_post_sentiment(self, post_id: int, sentiment_label: str, sentiment_score: str) -> bool:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
 
@@ -180,37 +169,17 @@ class SocialMediaDB:
             session.close()
             return False
 
-        post.sentiment_score = sentiment_score
         post.sentiment_label = sentiment_label
-        post.processing_status = 'completed'
+        post.sentiment_score = sentiment_score
         session.commit()
         session.close()
         return True
-    
-    def update_post_generated_text(self, post_id: int, generated_text: str) -> bool:
-        """Update post with generated text suggestions"""
+
+    def get_post_text_by_id(self, post_id: int) -> Optional[str]:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
-
-        if not post:
-            session.close()
-            return False
-
-        post.generated_text = generated_text
-        session.commit()
         session.close()
-        return True
-    
-    def set_post_processing_status(self, post_id: int, status: str) -> bool:
-        """Set post processing status"""
-        session = self.Session()
-        post = session.query(Post).filter_by(id=post_id).first()
 
-        if not post:
-            session.close()
-            return False
-
-        post.processing_status = status
-        session.commit()
-        session.close()
-        return True
+        if post:
+            return post.text
+        return None    

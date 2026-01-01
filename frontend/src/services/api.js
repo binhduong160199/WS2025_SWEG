@@ -18,9 +18,6 @@ export const fetchPostsWithImages = async () => {
   // - thumbnail
   // - has_image
   // - has_thumbnail
-  // - sentiment_label
-  // - sentiment_score
-  // - processing_status
   return {
     posts: data.posts || [],
   };
@@ -81,7 +78,6 @@ export const searchPostsWithImages = async (query) => {
 /**
  * Create new post
  * - Backend will publish resize event if image exists
- * - Will also trigger sentiment analysis and text generation
  */
 export const createPost = async (newPost) => {
   const response = await fetch(`${API_BASE_URL}/posts`, {
@@ -100,70 +96,32 @@ export const createPost = async (newPost) => {
   return response.json();
 };
 
-// ======================================================
-// ML Features APIs
-// ======================================================
-
 /**
- * Fetch sentiment analysis for a post
- * - Returns sentiment_label and sentiment_score
- * - Returns processing_status
+ * Generate text suggestions using GPT-2
+ * - Uses /posts/generate
  */
-export const fetchPostSentiment = async (postId) => {
-  const response = await fetch(`${API_BASE_URL}/posts/${postId}/sentiment`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch post sentiment');
-  }
-
-  return response.json();
-};
-
-/**
- * Fetch generated text suggestions for a post
- * - Returns generated_text (JSON with suggestions array)
- * - Returns processing_status
- */
-export const fetchGeneratedText = async (postId) => {
-  const response = await fetch(
-    `${API_BASE_URL}/posts/${postId}/generated-text`
-  );
-  if (!response.ok) {
-    throw new Error('Failed to fetch generated text');
-  }
-
-  return response.json();
-};
-
-/**
- * Fetch all ML analysis for a post
- * - Returns combined sentiment and generated text
- * - Returns processing_status
- */
-export const fetchMLAnalysis = async (postId) => {
-  const response = await fetch(`${API_BASE_URL}/posts/${postId}/ml-analysis`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch ML analysis');
-  }
-
-  return response.json();
-};
-
-/**
- * Trigger re-analysis for a post
- * - Republishes sentiment analysis and text generation events
- * - Returns immediately with status
- */
-export const reAnalyzePost = async (postId) => {
-  const response = await fetch(`${API_BASE_URL}/posts/${postId}/re-analyze`, {
+export const generateText = async (prompt) => {
+  const response = await fetch(`${API_BASE_URL}/posts/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ prompt }),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to trigger re-analysis');
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate text');
   }
 
   return response.json();
+};
+
+export const api = {
+  fetchPostsWithImages,
+  fetchPostDetail,
+  fetchLatestPostWithImage,
+  searchPostsWithImages,
+  createPost,
+  generateText,
 };

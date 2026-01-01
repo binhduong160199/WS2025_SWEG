@@ -6,11 +6,12 @@ import {
   User,
   Eye,
   TrendingUp,
-  X
+  X,
+  Smile,
+  Frown,
+  Meh
 } from 'lucide-react';
 import { fetchPostDetail } from '../services/api';
-import SentimentBadge from './SentimentBadge';
-import TextSuggestions from './TextSuggestions';
 
 const PostCard = ({ post, onLike, isLatest = false }) => {
 
@@ -99,6 +100,26 @@ const PostCard = ({ post, onLike, isLatest = false }) => {
 
           <p className="text-gray-200 mb-4 leading-relaxed">{post.text}</p>
 
+          {/* ---------------- SENTIMENT BADGE ---------------- */}
+          {post.sentiment_label && (
+            <div className="mb-4 inline-flex items-center space-x-2 px-3 py-1.5 rounded-full backdrop-blur-sm border
+              {post.sentiment_label === 'POSITIVE' 
+                ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                : post.sentiment_label === 'NEGATIVE'
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-gray-500/10 border-gray-500/30 text-gray-400'}">
+              {post.sentiment_label === 'POSITIVE' && <Smile className="w-4 h-4" />}
+              {post.sentiment_label === 'NEGATIVE' && <Frown className="w-4 h-4" />}
+              {(!post.sentiment_label || post.sentiment_label === 'NEUTRAL') && <Meh className="w-4 h-4" />}
+              <span className="text-sm font-medium">{post.sentiment_label}</span>
+              {post.sentiment_score && (
+                <span className="text-xs opacity-70">
+                  {(parseFloat(post.sentiment_score) * 100).toFixed(0)}%
+                </span>
+              )}
+            </div>
+          )}
+
           {/* ---------------- IMAGE SECTION (FIXED) ---------------- */}
 
           {/* Thumbnail available */}
@@ -126,19 +147,6 @@ const PostCard = ({ post, onLike, isLatest = false }) => {
               Image is processing...
             </div>
           )}
-
-          {/* ML Features Section */}
-          <div className="mb-4 flex flex-col space-y-3">
-            <SentimentBadge 
-              sentiment={post.sentiment_label}
-              score={post.sentiment_score}
-              processingStatus={post.processing_status}
-            />
-            <TextSuggestions 
-              generatedText={post.generated_text}
-              processingStatus={post.processing_status}
-            />
-          </div>
 
           <div className="flex items-center space-x-6 py-3 border-t border-b border-purple-500/20 mb-4">
             <span className="text-sm text-gray-400">{likeCount} likes</span>
