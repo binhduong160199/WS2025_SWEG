@@ -66,6 +66,14 @@ def main():
     """Main consumer loop"""
     logging.info("[sentiment] Starting sentiment analysis service...")
     
+    # Preload the model to avoid delays on first request
+    logging.info("[sentiment] Preloading sentiment model...")
+    try:
+        analyze_sentiment("Test warm-up message")
+        logging.info("[sentiment] Model preloaded successfully")
+    except Exception as e:
+        logging.warning(f"[sentiment] Failed to preload model: {e}")
+    
     conn = _connect_with_retry()
     ch = conn.channel()
 

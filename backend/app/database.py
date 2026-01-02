@@ -182,4 +182,33 @@ class SocialMediaDB:
 
         if post:
             return post.text
-        return None    
+        return None
+    
+    def get_text_suggestion_for_post(self, post_id: int):
+        """Get the latest generated text suggestion for a post"""
+        from sqlalchemy import text
+        session = self.Session()
+        
+        try:
+            # Check if table exists first (or catch the error)
+            result = session.execute(
+                text("""
+                    SELECT generated_text 
+                    FROM text_suggestions 
+                    WHERE post_id = :post_id 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                """),
+                {"post_id": post_id}
+            ).fetchone()
+            
+            if result:
+                return result[0]
+            return None
+            
+        except Exception as e:
+            # This print helps you see if it's a "Table not found" error in docker logs
+            print(f"Database warning: {e}") 
+            return None
+        finally:
+            session.close()

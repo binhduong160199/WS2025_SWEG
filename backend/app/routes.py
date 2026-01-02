@@ -256,6 +256,9 @@ def generate_text():
               prompt:
                 type: string
                 description: Text prompt for generation
+              post_id:
+                type: integer
+                description: Optional post ID to retrieve generated text for
               max_length:
                 type: integer
                 description: Maximum length of generated text (default 50)
@@ -268,21 +271,40 @@ def generate_text():
     try:
         data = request.get_json()
 
-        if data is None or not data.get('prompt'):
+        if data is None:
+            return jsonify({'error': 'Request body is required'}), 400
+
+        # If post_id is provided, try to retrieve the generated text
+        if 'post_id' in data:
+            post_id = data.get('post_id')
+            db = get_db()
+            
+            # Check if text generation is complete
+            generated_text = db.get_text_suggestion_for_post(post_id)
+
+            if generated_text:
+                return jsonify({
+                    'post_id': post_id,
+                    'generated_text': generated_text,
+                    'suggestions': [generated_text],
+                    'status': 'completed'
+                }), 200
+            else:
+                return jsonify({
+                    'post_id': post_id,
+                    'status': 'processing',
+                    'message': 'Text generation in progress'
+                }), 202
+
+        # Legacy: return placeholder for direct prompt
+        prompt = data.get('prompt', '').strip()
+        if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
 
-        prompt = data.get('prompt', '').strip()
-        max_length = data.get('max_length', 50)
-
-        if not prompt:
-            return jsonify({'error': 'Prompt cannot be empty'}), 400
-
-        # For now, return a placeholder response
-        # The actual generation will be done by the microservice
         return jsonify({
             'prompt': prompt,
-            'generated_text': f"{prompt}... [Text generation service will process this]",
-            'message': 'Text generation request received'
+            'generated_text': f"{prompt}... [Please create a post first to generate text]",
+            'message': 'Create a post to use text generation'
         }), 200
 
     except Exception as e:

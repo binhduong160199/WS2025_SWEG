@@ -117,6 +117,30 @@ export const generateText = async (prompt) => {
   return response.json();
 };
 
+/**
+ * Get generated text for a post
+ * - Retrieves generated text from database after microservice processing
+ */
+export const getGeneratedTextForPost = async (postId) => {
+    console.log(postId);
+  const response = await fetch(`${API_BASE_URL}/posts/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ post_id: postId }),
+  });
+
+  console.log(response);
+
+  if (!response.ok && response.status !== 202) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get generated text');
+  }
+
+  return response.json();
+};
+
 export const api = {
   fetchPostsWithImages,
   fetchPostDetail,
@@ -124,4 +148,5 @@ export const api = {
   searchPostsWithImages,
   createPost,
   generateText,
+  getGeneratedTextForPost,
 };

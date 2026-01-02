@@ -34,6 +34,7 @@ def handle_message(ch, method, properties, body):
     try:
         data = json.loads(body.decode("utf-8"))
         post_id = int(data["post_id"])
+        logging.info(f"[text-gen] Received request for post_id={post_id}")
     except Exception as e:
         logging.error(f"[text-gen] Invalid message: {body!r} error={e}")
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -48,23 +49,33 @@ def handle_message(ch, method, properties, body):
             return
 
         # Generate text continuation
-        logging.info(f"[text-gen] Generating for post_id={post_id}")
+        logging.info(f"[text-gen] Generating for post_id={post_id}, text_length={len(text)}")
         generated = generate_text(text, max_length=100)
         
         # Save to database
+        logging.info(f"[text-gen] Saving generated text for post_id={post_id}")
         save_generated_text(post_id, generated)
 
-        logging.info(f"[text-gen] Generated for post_id={post_id} (length={len(generated)})")
+        logging.info(f"[text-gen] SUCCESS - Generated for post_id={post_id} (length={len(generated)})")
+        logging.info(f"[text-gen] SUCCESS - Generated for post_id={post_id} (txt={generated})")
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     except Exception as e:
-        logging.error(f"[text-gen] Failed processing post_id={post_id}: {e}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        logging.error(f"[text-gen] FAILED processing post_id={post_id}: {e}", exc_info=True)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  # Don't requeue on error
 
 
 def main():
     """Main consumer loop"""
     logging.info("[text-gen] Starting text generation service...")
+    
+    # Preload the model to avoid delays on first request
+    logging.info("[text-gen] Preloading GPT-2 model...")
+    try:
+        generate_text("Test warm-up", max_length=20)
+        logging.info("[text-gen] Model preloaded successfully")
+    except Exception as e:
+        logging.warning(f"[text-gen] Failed to preload model: {e}")
     
     conn = _connect_with_retry()
     ch = conn.channel()

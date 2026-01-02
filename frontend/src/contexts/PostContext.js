@@ -3,6 +3,7 @@ import {
   fetchPostsWithImages,
   createPost,
   searchPostsWithImages,
+  getGeneratedTextForPost,
 } from '../services/api';
 
 const PostsContext = createContext();
@@ -34,6 +35,11 @@ export const PostsProvider = ({ children }) => {
     return data.posts || [];
   };
 
+  const getText = async (query) => {
+    const data = await getGeneratedTextForPost(query);
+    return data.json() || [];
+  };
+
   return (
     <PostsContext.Provider value={{
       posts,
@@ -42,6 +48,7 @@ export const PostsProvider = ({ children }) => {
       error,
       addPost,
       doSearch,
+      getText,
     }}>
       {children}
     </PostsContext.Provider>
