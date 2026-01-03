@@ -4,15 +4,8 @@ import pika
 import logging
 
 
-def publish_image_resize_event(post_id: int) -> None:
-    """
-    Publish image resize event.
-
-    IMPORTANT:
-    - This must NEVER break the REST API.
-    - If RabbitMQ is unavailable (tests / CI), we silently skip.
-    """
-
+def _publish_event(queue_name: str, post_id: int) -> None:
+    """Generic function to publish events to RabbitMQ"""
     rabbitmq_url = os.getenv(
         "RABBITMQ_URL",
         "amqp://guest:guest@rabbitmq:5672/"
@@ -24,7 +17,7 @@ def publish_image_resize_event(post_id: int) -> None:
         channel = connection.channel()
 
         channel.queue_declare(
-            queue="image_resize",
+            queue=queue_name,
             durable=True
         )
 
@@ -32,7 +25,7 @@ def publish_image_resize_event(post_id: int) -> None:
 
         channel.basic_publish(
             exchange="",
-            routing_key="image_resize",
+            routing_key=queue_name,
             body=message,
             properties=pika.BasicProperties(
                 delivery_mode=2  # persist message
@@ -43,5 +36,66 @@ def publish_image_resize_event(post_id: int) -> None:
 
     except Exception as e:
         logging.warning(
-            f"[messaging] RabbitMQ unavailable, skipping resize event: {e}"
+            f"[messaging] RabbitMQ unavailable, skipping {queue_name} event: {e}"
+        )
+
+
+def publish_image_resize_event(post_id: int) -> None:
+    """
+    Publish image resize event.
+
+    IMPORTANT:
+    - This must NEVER break the REST API.
+    - If RabbitMQ is unavailable (tests / CI), we silently skip.
+    """
+    _publish_event("image_resize", post_id)
+
+
+def publish_sentiment_analysis_event(post_id: int) -> None:
+    """Publish sentiment analysis event"""
+    _publish_event("sentiment_analysis", post_id)
+
+
+# =====================================================
+# ONLY CHANGE: TEXT GENERATION (NO post_id)
+# =====================================================
+
+def publish_text_generation_event(prompt: str) -> None:
+    """
+    Publish text generation event.
+    - Runs via RabbitMQ
+    - NO connection to posts table
+    """
+    rabbitmq_url = os.getenv(
+        "RABBITMQ_URL",
+        "amqp://guest:guest@rabbitmq:5672/"
+    )
+
+    try:
+        params = pika.URLParameters(rabbitmq_url)
+        connection = pika.BlockingConnection(params)
+        channel = connection.channel()
+
+        channel.queue_declare(
+            queue="text_generation",
+            durable=True
+        )
+
+        # ONLY SEND PROMPT
+        message = json.dumps({"prompt": prompt})
+
+        channel.basic_publish(
+            exchange="",
+            routing_key="text_generation",
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2  # persist message
+            )
+        )
+
+        connection.close()
+
+    except Exception as e:
+        logging.warning(
+            f"[messaging] RabbitMQ unavailable, skipping text_generation event: {e}"
         )

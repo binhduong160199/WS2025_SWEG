@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Send, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { X, Send, Image as ImageIcon, CheckCircle, Sparkles } from 'lucide-react';
 import { usePosts } from '../contexts/PostContext';
 
 const initialPostState = {
@@ -9,11 +9,12 @@ const initialPostState = {
 };
 
 const CreatePostModal = ({ onClose }) => {
-  const { addPost } = usePosts();
+  const { addPost, requestGeneratedText } = usePosts();
   const [newPost, setNewPost] = useState(initialPostState);
   const [preview, setPreview] = useState(null);
 
   const [successMessage, setSuccessMessage] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -33,12 +34,28 @@ const CreatePostModal = ({ onClose }) => {
     setNewPost(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleGenerateSuggestion = async () => {
+    setIsGenerating(true);
+    setSuccessMessage("Generating text...");
+
+    try {
+      const generated = await requestGeneratedText(newPost.text);
+      setNewPost(prev => ({ ...prev, text: generated }));
+      setSuccessMessage("Suggestion generated and applied!");
+    } catch (error) {
+      setSuccessMessage("Failed to generate text.");
+    } finally {
+      setIsGenerating(false);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!newPost.user.trim() || !newPost.text.trim()) {
       setSuccessMessage("Please fill in all required fields.");
-      setTimeout(() => setSuccessMessage(""), 3000); 
+      setTimeout(() => setSuccessMessage(""), 3000);
       return;
     }
 
@@ -69,7 +86,38 @@ const CreatePostModal = ({ onClose }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              What's on your mind? *
+            </label>
+            <textarea
+              name="text"
+              value={newPost.text}
+              onChange={handleChange}
+              className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none"
+              placeholder="Share your thoughts..."
+              rows={4}
+              maxLength={500}
+              required
+              disabled={isGenerating}
+            />
+            <div className="flex items-center justify-between mt-1">
+              <button
+                type="button"
+                onClick={handleGenerateSuggestion}
+                disabled={isGenerating}
+                className="text-sm text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                {isGenerating ? 'Generating...' : 'Generate Suggestions'}
+              </button>
+              <div className="text-sm text-gray-400">
+                {newPost.text.length}/500
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Username *
@@ -88,25 +136,6 @@ const CreatePostModal = ({ onClose }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              What's on your mind? *
-            </label>
-            <textarea
-              name="text"
-              value={newPost.text}
-              onChange={handleChange}
-              className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none"
-              placeholder="Share your thoughts..."
-              rows={4}
-              maxLength={500}
-              required
-            />
-            <div className="text-right text-sm text-gray-400 mt-1">
-              {newPost.text.length}/500
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
               Add Image (Optional)
             </label>
             <div className="relative">
@@ -116,6 +145,7 @@ const CreatePostModal = ({ onClose }) => {
                 onChange={handleImageUpload}
                 className="hidden"
                 id="image-upload"
+                disabled={isGenerating}
               />
               <label
                 htmlFor="image-upload"
@@ -150,6 +180,7 @@ const CreatePostModal = ({ onClose }) => {
             <button
               type="submit"
               className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center justify-center space-x-2"
+              disabled={isGenerating}
             >
               <Send className="w-5 h-5" />
               <span>Post</span>

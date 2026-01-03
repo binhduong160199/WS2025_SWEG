@@ -50,7 +50,9 @@ class PostResponse:
     text: str
     image: Optional[str]        # full-size base64
     thumbnail: Optional[str]    # NEW: thumbnail base64
-    created_at: str
+    sentiment_label: Optional[str] = None
+    sentiment_score: Optional[str] = None
+    created_at: str = ''
 
     @classmethod
     def from_db(cls, post_data: dict) -> 'PostResponse':
@@ -69,6 +71,8 @@ class PostResponse:
             text=post_data['text'],
             image=image_b64,
             thumbnail=thumb_b64,
+            sentiment_label=post_data.get('sentiment_label'),
+            sentiment_score=post_data.get('sentiment_score'),
             created_at=post_data['created_at']
         )
 
@@ -79,6 +83,8 @@ class PostResponse:
             'text': self.text,
             'image': self.image,
             'thumbnail': self.thumbnail,
+            'sentiment_label': self.sentiment_label,
+            'sentiment_score': self.sentiment_score,
             'created_at': self.created_at
         }
 
@@ -96,6 +102,8 @@ class PostListResponse:
     has_image: bool = False
     has_thumbnail: bool = False
     thumbnail: Optional[str] = None
+    sentiment_label: Optional[str] = None
+    sentiment_score: Optional[str] = None
 
     @classmethod
     def from_db(cls, post_data: dict) -> 'PostListResponse':
@@ -113,7 +121,9 @@ class PostListResponse:
             created_at=post_data['created_at'],
             has_image=post_data.get('image') is not None,
             has_thumbnail=post_data.get('image_thumb') is not None,
-            thumbnail=thumb_b64
+            thumbnail=thumb_b64,
+            sentiment_label=post_data.get('sentiment_label'),
+            sentiment_score=post_data.get('sentiment_score')
         )
 
     def to_dict(self) -> dict:
@@ -124,5 +134,7 @@ class PostListResponse:
             'created_at': self.created_at,
             'has_image': self.has_image,
             'has_thumbnail': self.has_thumbnail,
-            'image_thumb': self.thumbnail
+            'image_thumb': self.thumbnail,
+            'sentiment_label': self.sentiment_label,
+            'sentiment_score': self.sentiment_score
         }

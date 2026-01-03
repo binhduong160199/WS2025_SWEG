@@ -1,4 +1,3 @@
-import React from 'react';
 import { Camera } from 'lucide-react';
 const EmptyState = ({ onCreate }) => (
   <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-12 text-center">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import debounce from 'lodash.debounce';
+import { Smile, Frown, Filter } from 'lucide-react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import PostCard from './PostCard';
@@ -23,6 +24,7 @@ const MainPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPosts, setFilteredPosts] = useState(null); 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState('all'); // NEW: sentiment filter
 
   const [activeTab, setActiveTab] = useState('feed');
   const debouncedSearchRef = useRef(null);
@@ -67,7 +69,15 @@ const MainPage = () => {
     // Liking logic (optional)
   };
 
-  const displayPosts = filteredPosts !== null ? filteredPosts : posts;
+  // Filter posts by sentiment
+  const filterBySentiment = (postsToFilter) => {
+    if (sentimentFilter === 'all') return postsToFilter;
+    return postsToFilter.filter(post => 
+      post.sentiment_label && post.sentiment_label.toUpperCase() === sentimentFilter.toUpperCase()
+    );
+  };
+
+  const displayPosts = filterBySentiment(filteredPosts !== null ? filteredPosts : posts);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex flex-col">
@@ -79,6 +89,50 @@ const MainPage = () => {
         setSearchQuery={setSearchQuery}
         onSearch={handleSearch}
       />
+            
+            {/* ---------------- SENTIMENT FILTER BUTTONS ---------------- */}
+            {!loading && posts.length > 0 && (
+              <div className="mb-6 flex items-center space-x-3 bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-purple-500/20">
+                <Filter className="w-5 h-5 text-purple-400" />
+                <span className="text-sm text-gray-300 font-medium">Filter by Sentiment:</span>
+                
+                <button
+                  onClick={() => setSentimentFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    sentimentFilter === 'all'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  All Posts
+                </button>
+                
+                <button
+                  onClick={() => setSentimentFilter('positive')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    sentimentFilter === 'positive'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  <Smile className="w-4 h-4" />
+                  <span>Positive</span>
+                </button>
+                
+                <button
+                  onClick={() => setSentimentFilter('negative')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    sentimentFilter === 'negative'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  <Frown className="w-4 h-4" />
+                  <span>Negative</span>
+                </button>
+              </div>
+            )}
+            
       <main className="flex-1 max-w-6xl mx-auto px-4 py-8 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">

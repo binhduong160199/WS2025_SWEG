@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sparkles, Clock } from 'lucide-react';
 import { usePosts } from '../contexts/PostContext';
 
