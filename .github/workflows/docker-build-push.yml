@@ -81,10 +81,10 @@ jobs:
 
       - uses: docker/build-push-action@v5
         with:
-          context: ./backend/text-generator
-          file: ./backend/text-generator/Dockerfile
+          context: ./backend/text_generator
+          file: ./backend/text_generator/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/text-generator:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/text_generator:latest
 
   build-and-push-image-resizer:
     runs-on: ubuntu-latest
