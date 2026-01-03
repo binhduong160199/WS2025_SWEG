@@ -12,19 +12,11 @@ class Post(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user = Column(String, nullable=False)
     text = Column(Text, nullable=False)
-
-    # full-size image (existing)
     image = Column(LargeBinary)
-
-    # NEW: reduced-size / thumbnail image
     image_thumb = Column(LargeBinary)
-
-    # Sentiment analysis fields
     sentiment_label = Column(String(20))
     sentiment_score = Column(String(50))
-
     created_at = Column(TIMESTAMP, server_default=func.now())
-
 
 class SocialMediaDB:
     def __init__(self, db_url: str):
@@ -38,7 +30,6 @@ class SocialMediaDB:
         if image_path:
             with open(image_path, 'rb') as f:
                 image_data = f.read()
-
         post = Post(user=user, text=text, image=image_data, image_thumb=None)
         session.add(post)
         session.commit()
@@ -65,7 +56,7 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
-                'image_thumb': post.image_thumb,  # NEW
+                'image_thumb': post.image_thumb,
                 'sentiment_label': post.sentiment_label,
                 'sentiment_score': post.sentiment_score,
                 'created_at': post.created_at
@@ -82,7 +73,7 @@ class SocialMediaDB:
                 'user': post.user,
                 'text': post.text,
                 'image': post.image,
-                'image_thumb': post.image_thumb,  # NEW
+                'image_thumb': post.image_thumb,
                 'sentiment_label': post.sentiment_label,
                 'sentiment_score': post.sentiment_score,
                 'created_at': post.created_at
@@ -94,7 +85,6 @@ class SocialMediaDB:
         query = session.query(Post).order_by(Post.id.desc())
         if limit:
             query = query.limit(limit)
-
         posts = [
             {
                 'id': post.id,
@@ -102,7 +92,7 @@ class SocialMediaDB:
                 'text': post.text,
                 'created_at': post.created_at,
                 'image': post.image,
-                'image_thumb': post.image_thumb,  # NEW
+                'image_thumb': post.image_thumb,
                 'sentiment_label': post.sentiment_label,
                 'sentiment_score': post.sentiment_score
             }
@@ -116,7 +106,6 @@ class SocialMediaDB:
         posts = session.query(Post).filter(
             (Post.text.ilike(f'%{query}%')) | (Post.user.ilike(f'%{query}%'))
         ).order_by(Post.id.desc()).all()
-
         result = [
             {
                 'id': post.id,
@@ -124,7 +113,7 @@ class SocialMediaDB:
                 'text': post.text,
                 'created_at': post.created_at,
                 'image': post.image,
-                'image_thumb': post.image_thumb,  # NEW
+                'image_thumb': post.image_thumb,
                 'sentiment_label': post.sentiment_label,
                 'sentiment_score': post.sentiment_score
             }
@@ -143,19 +132,16 @@ class SocialMediaDB:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
         session.close()
-
         if post:
             return post.image
-        return None        
+        return None
 
     def update_post_thumbnail(self, post_id: int, thumbnail_data: bytes) -> bool:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
-
         if not post:
             session.close()
             return False
-
         post.image_thumb = thumbnail_data
         session.commit()
         session.close()
@@ -164,11 +150,9 @@ class SocialMediaDB:
     def update_post_sentiment(self, post_id: int, sentiment_label: str, sentiment_score: str) -> bool:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
-
         if not post:
             session.close()
             return False
-
         post.sentiment_label = sentiment_label
         post.sentiment_score = sentiment_score
         session.commit()
@@ -179,36 +163,27 @@ class SocialMediaDB:
         session = self.Session()
         post = session.query(Post).filter_by(id=post_id).first()
         session.close()
-
         if post:
             return post.text
         return None
-    
-    def get_text_suggestion_for_post(self, post_id: int):
-        """Get the latest generated text suggestion for a post"""
+
+    def get_latest_text_suggestion(self):
         from sqlalchemy import text
         session = self.Session()
-        
         try:
-            # Check if table exists first (or catch the error)
             result = session.execute(
                 text("""
-                    SELECT generated_text 
-                    FROM text_suggestions 
-                    WHERE post_id = :post_id 
-                    ORDER BY created_at DESC 
+                    SELECT generated_text
+                    FROM text_suggestions
+                    ORDER BY created_at DESC
                     LIMIT 1
-                """),
-                {"post_id": post_id}
+                """)
             ).fetchone()
-            
             if result:
                 return result[0]
             return None
-            
         except Exception as e:
-            # This print helps you see if it's a "Table not found" error in docker logs
-            print(f"Database warning: {e}") 
+            print(f"Database warning: {e}")
             return None
         finally:
             session.close()

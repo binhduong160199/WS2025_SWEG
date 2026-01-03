@@ -1,11 +1,5 @@
 import { API_BASE_URL } from '../utils/constants';
 
-/**
- * Fetch posts for FEED
- * - Uses /posts
- * - Uses thumbnail ONLY
- * - DOES NOT fetch full image
- */
 export const fetchPostsWithImages = async () => {
   const response = await fetch(`${API_BASE_URL}/posts`);
   if (!response.ok) {
@@ -13,22 +7,11 @@ export const fetchPostsWithImages = async () => {
   }
 
   const data = await response.json();
-
-  // Backend already returns:
-  // - thumbnail
-  // - has_image
-  // - has_thumbnail
   return {
     posts: data.posts || [],
   };
 };
 
-/**
- * Fetch a single post detail
- * - Uses /posts/:id
- * - Returns FULL image
- * - Used only when user clicks / opens detail
- */
 export const fetchPostDetail = async (postId) => {
   const response = await fetch(`${API_BASE_URL}/posts/${postId}`);
   if (!response.ok) {
@@ -38,12 +21,6 @@ export const fetchPostDetail = async (postId) => {
   return response.json();
 };
 
-/**
- * Fetch latest post
- * - Uses /posts/latest
- * - NO extra detail fetch
- * - Uses thumbnail only
- */
 export const fetchLatestPostWithImage = async () => {
   const response = await fetch(`${API_BASE_URL}/posts/latest`);
   if (!response.ok) {
@@ -53,12 +30,6 @@ export const fetchLatestPostWithImage = async () => {
   return response.json();
 };
 
-/**
- * Search posts
- * - Uses /posts/search
- * - Uses thumbnail ONLY
- * - NO per-post detail requests
- */
 export const searchPostsWithImages = async (query) => {
   const response = await fetch(
     `${API_BASE_URL}/posts/search?q=${encodeURIComponent(query)}`
@@ -75,10 +46,6 @@ export const searchPostsWithImages = async (query) => {
   };
 };
 
-/**
- * Create new post
- * - Backend will publish resize event if image exists
- */
 export const createPost = async (newPost) => {
   const response = await fetch(`${API_BASE_URL}/posts`, {
     method: 'POST',
@@ -96,10 +63,6 @@ export const createPost = async (newPost) => {
   return response.json();
 };
 
-/**
- * Generate text suggestions using GPT-2
- * - Uses /posts/generate
- */
 export const generateText = async (prompt) => {
   const response = await fetch(`${API_BASE_URL}/posts/generate`, {
     method: 'POST',
@@ -117,28 +80,20 @@ export const generateText = async (prompt) => {
   return response.json();
 };
 
-/**
- * Get generated text for a post
- * - Retrieves generated text from database after microservice processing
- */
-export const getGeneratedTextForPost = async (postId) => {
-    console.log(postId);
-  const response = await fetch(`${API_BASE_URL}/posts/generate`, {
-    method: 'POST',
+export const getLatestGeneratedText = async () => {
+  const response = await fetch(`${API_BASE_URL}/posts/generated-text`, {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ post_id: postId }),
   });
 
-  console.log(response);
-
-  if (!response.ok && response.status !== 202) {
+  if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to get generated text');
+    throw new Error(error.error || 'Failed to fetch generated text');
   }
 
-  return response.json();
+  return response.json(); 
 };
 
 export const api = {
@@ -148,5 +103,5 @@ export const api = {
   searchPostsWithImages,
   createPost,
   generateText,
-  getGeneratedTextForPost,
+  getLatestGeneratedText,
 };

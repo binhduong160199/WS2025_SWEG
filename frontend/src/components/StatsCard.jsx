@@ -1,5 +1,4 @@
-import React from 'react';
-import { TrendingUp, Users, Heart, MessageCircle, Smile, Frown } from 'lucide-react';
+import { TrendingUp, Users, Smile, Frown } from 'lucide-react';
 import { usePosts } from '../contexts/PostContext';
 
 const StatsCard = ({ posts: propPosts }) => {

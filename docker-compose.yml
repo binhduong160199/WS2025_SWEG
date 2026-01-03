@@ -71,7 +71,7 @@ services:
   # Text Generator Microservice
   # --------------------------------------------------
   text-generator:
-    build: ./backend/text-generator
+    build: ./backend/text_generator
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/social_media
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/

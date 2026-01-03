@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Send, Image as ImageIcon, CheckCircle, Sparkles } from 'lucide-react';
-import { usePosts} from '../contexts/PostContext';
-import { api } from '../services/api';
+import { usePosts } from '../contexts/PostContext';
 
 const initialPostState = {
   user: '',
@@ -10,12 +9,11 @@ const initialPostState = {
 };
 
 const CreatePostModal = ({ onClose }) => {
-  const { addPost, getText } = usePosts();
+  const { addPost, requestGeneratedText } = usePosts();
   const [newPost, setNewPost] = useState(initialPostState);
   const [preview, setPreview] = useState(null);
 
   const [successMessage, setSuccessMessage] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleImageUpload = (e) => {
@@ -37,81 +35,19 @@ const CreatePostModal = ({ onClose }) => {
   };
 
   const handleGenerateSuggestion = async () => {
-    if (!newPost.text.trim()) {
-      setSuccessMessage("Please enter some text first to generate suggestions.");
-      setTimeout(() => setSuccessMessage(""), 3000);
-      return;
-    }
-
     setIsGenerating(true);
-    setSuccessMessage("Generating text suggestions... This may take a moment.");
-    
-    try {
-      // First, create a temporary post to get a post_id for generation
-      // const tempPostData = {
-      //   user: newPost.user || "TempUser",
-      //   text: newPost.text,
-      //   image: null
-      // };
-      // console.log(tempPostData);
-      // const createResponse = await addPost(tempPostData);
-      // const postId = createResponse?.post?.id;
-      // console.log(postId);
-      // if (!postId) {
-      //   throw new Error("Failed to create temporary post");
-      // }
-      
-      // Poll for generated text (max 30 seconds, check every 2 seconds)
-      let attempts = 0;
-      const maxAttempts = 15;
-      console.log("Starting polling for text generation...");
-      const pollForGeneration = async () => {
-        try {
-          const result = await getText(17);
-          console.log("Polling result:", result);
-          if (result.status === 'completed' && result.suggestions) {
-            setSuggestions(result.suggestions);
-            setSuccessMessage("Suggestions generated! Click on a suggestion to use it.");
-            setTimeout(() => setSuccessMessage(""), 5000);
-            setIsGenerating(false);
-            return true;
-          }
-          
-          if (attempts < maxAttempts) {
-            attempts++;
-            setTimeout(pollForGeneration, 2000);
-          } else {
-            setSuccessMessage("Text generation is taking longer than expected. Please try again.");
-            setTimeout(() => setSuccessMessage(""), 3000);
-            setIsGenerating(false);
-          }
-        } catch (error) {
-          attempts++;
-          if (attempts < maxAttempts) {
-            setTimeout(pollForGeneration, 2000);
-          } else {
-            setSuccessMessage("Failed to generate text. Please try again.");
-            setTimeout(() => setSuccessMessage(""), 3000);
-            setIsGenerating(false);
-          }
-        }
-      };
-      
-      pollForGeneration();
-      
-    } catch (error) {
-      console.error("Generation error:", error);
-      setSuccessMessage("Failed to generate suggestions. Please try again.");
-      setTimeout(() => setSuccessMessage(""), 3000);
-      setIsGenerating(false);
-    }
-  };
+    setSuccessMessage("Generating text...");
 
-  const handleUseSuggestion = (suggestion) => {
-    setNewPost(prev => ({ ...prev, text: suggestion }));
-    setSuggestions([]);
-    setSuccessMessage("Suggestion applied!");
-    setTimeout(() => setSuccessMessage(""), 2000);
+    try {
+      const generated = await requestGeneratedText(newPost.text);
+      setNewPost(prev => ({ ...prev, text: generated }));
+      setSuccessMessage("Suggestion generated and applied!");
+    } catch (error) {
+      setSuccessMessage("Failed to generate text.");
+    } finally {
+      setIsGenerating(false);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -119,7 +55,7 @@ const CreatePostModal = ({ onClose }) => {
 
     if (!newPost.user.trim() || !newPost.text.trim()) {
       setSuccessMessage("Please fill in all required fields.");
-      setTimeout(() => setSuccessMessage(""), 3000); 
+      setTimeout(() => setSuccessMessage(""), 3000);
       return;
     }
 
@@ -127,7 +63,6 @@ const CreatePostModal = ({ onClose }) => {
 
     setNewPost(initialPostState);
     setPreview(null);
-    setSuggestions([]);
     setSuccessMessage("Post created successfully!");
   };
 
@@ -165,12 +100,13 @@ const CreatePostModal = ({ onClose }) => {
               rows={4}
               maxLength={500}
               required
+              disabled={isGenerating}
             />
             <div className="flex items-center justify-between mt-1">
               <button
                 type="button"
                 onClick={handleGenerateSuggestion}
-                disabled={isGenerating || !newPost.text.trim()}
+                disabled={isGenerating}
                 className="text-sm text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <Sparkles className="w-4 h-4" />
@@ -180,21 +116,6 @@ const CreatePostModal = ({ onClose }) => {
                 {newPost.text.length}/500
               </div>
             </div>
-            
-            {suggestions.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <p className="text-sm font-medium text-gray-300">AI Suggestions:</p>
-                {suggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleUseSuggestion(suggestion)}
-                    className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-gray-300 cursor-pointer hover:bg-purple-500/20 hover:border-purple-500 transition-all"
-                  >
-                    {suggestion}
-                  </div>
-                ))}
-              </div>
-            )} 
           </div>
 
           <div>
@@ -224,6 +145,7 @@ const CreatePostModal = ({ onClose }) => {
                 onChange={handleImageUpload}
                 className="hidden"
                 id="image-upload"
+                disabled={isGenerating}
               />
               <label
                 htmlFor="image-upload"
@@ -258,6 +180,7 @@ const CreatePostModal = ({ onClose }) => {
             <button
               type="submit"
               className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center justify-center space-x-2"
+              disabled={isGenerating}
             >
               <Send className="w-5 h-5" />
               <span>Post</span>

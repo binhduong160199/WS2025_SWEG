@@ -13,7 +13,9 @@ def create_app(config=None):
         Flask application instance
     """
     app = Flask(__name__)
-    CORS(app)
+
+    # Allow CORS for your React frontend at localhost:3000 (safe for dev)
+    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
 
     # --- 1. Load config in order of priority ---
     # a) test-time override (arg)
@@ -37,15 +39,11 @@ def create_app(config=None):
             from config import Config
         db_url = getattr(Config, "DATABASE_URL", None)
 
-        # d) final fallback: FAIL if nothing is set
+    # d) final fallback: FAIL if nothing is set
     if not db_url:
         raise RuntimeError("DATABASE_URL is not set! Please set DATABASE_URL environment variable.")
 
     app.config['DATABASE_URL'] = db_url
-
-    # --- 2. Register DB on app object (if needed by routes) ---
-    # from app.database import SocialMediaDB
-    # app.db = SocialMediaDB(db_url)
 
     # --- 3. Register API blueprints ---
     from app.routes import api_bp

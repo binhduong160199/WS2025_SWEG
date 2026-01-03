@@ -56,6 +56,46 @@ def publish_sentiment_analysis_event(post_id: int) -> None:
     _publish_event("sentiment_analysis", post_id)
 
 
-def publish_text_generation_event(post_id: int) -> None:
-    """Publish text generation event"""
-    _publish_event("text_generation", post_id)
+# =====================================================
+# ONLY CHANGE: TEXT GENERATION (NO post_id)
+# =====================================================
+
+def publish_text_generation_event(prompt: str) -> None:
+    """
+    Publish text generation event.
+    - Runs via RabbitMQ
+    - NO connection to posts table
+    """
+    rabbitmq_url = os.getenv(
+        "RABBITMQ_URL",
+        "amqp://guest:guest@rabbitmq:5672/"
+    )
+
+    try:
+        params = pika.URLParameters(rabbitmq_url)
+        connection = pika.BlockingConnection(params)
+        channel = connection.channel()
+
+        channel.queue_declare(
+            queue="text_generation",
+            durable=True
+        )
+
+        # ONLY SEND PROMPT
+        message = json.dumps({"prompt": prompt})
+
+        channel.basic_publish(
+            exchange="",
+            routing_key="text_generation",
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2  # persist message
+            )
+        )
+
+        connection.close()
+
+    except Exception as e:
+        logging.warning(
+            f"[messaging] RabbitMQ unavailable, skipping text_generation event: {e}"
+        )
